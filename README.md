@@ -1,5 +1,7 @@
 # rexec
 
+[![GoDoc](https://pkg.go.dev/badge/github.com/cdfmlr/rexec/v2)](https://pkg.go.dev/github.com/cdfmlr/rexec/v2)
+
 Run external commands locally or over SSH through a small, config-friendly API. `rexec` wraps `os/exec` and `golang.org/x/crypto/ssh` executors, plus a factory to choose between them.
 
 ## Features
@@ -55,7 +57,7 @@ cmd := &rexec.Command{Command: "echo $EDITOR", Stdout: os.Stdout}
 _ = exec.Execute(context.Background(), cmd)
 ```
 
-## SSH execution
+### SSH execution
 
 Immediate (connect per command):
 
@@ -80,7 +82,7 @@ cmd := &rexec.Command{Command: "uptime", Stdout: stdout}
 _ = ka.Execute(context.Background(), cmd)
 ```
 
-## Factory usage
+### Factory usage
 
 Pick exactly one configured executor; the factory returns it or errors if misconfigured:
 
@@ -93,7 +95,7 @@ if err != nil { /* handle */ }
 _ = exec.Execute(context.Background(), &rexec.Command{Command: "date"})
 ```
 
-## Configurations from JSON/YAML
+### Configurations from JSON/YAML
 
 All the structs in `rexec` is designed to be JSON/YAML serializable.
 So you can load configurations from config files directly into `rexec` 
@@ -130,11 +132,11 @@ command.Stdout = os.Stdout
 _ = executor.Execute(context.Background(), command)
 ```
 
-## Validation & safety
+### Validation & safety
 
 `Command.Validate()` rejects empty commands and common dangerous substrings in command, workdir, and env. Always set `Command` fields via struct literals; avoid interpolating untrusted input without validation.
 
-## Logging
+### Logging
 
 Logging is disabled by default. To enable slog-based logging:
 
@@ -144,7 +146,7 @@ rexec.Logger = slog.Default().With("pkg", "rexec")
 
 Set `useDebugLogger` in `logger.go` for built-in debug output during development.
 
-## Testing SSH helpers (dev only)
+### Testing SSH helpers (dev only)
 
 To run rexec tests involving SSH, we need to spin up a test SSH server
 that defined in `testsshd/`.
@@ -158,6 +160,10 @@ docker compose -f testsshd-docker-compose.yml up
 ```
 
 See `testsshd/README.md` for details.
+
+## Documentation
+
+See the GoDoc page: https://pkg.go.dev/github.com/cdfmlr/rexec/v2
 
 ## Version
 
