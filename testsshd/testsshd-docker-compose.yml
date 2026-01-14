@@ -1,0 +1,11 @@
+version: '3'
+services:
+  # ssh -p 24622 -i ./testsshd.id_rsa root@localhost (or password: root)
+  # user: root, password: root, key: ./testsshd.id_rsa
+  rexecTestSshd:
+    image: test-sshd:v0.5
+    build:
+      context: .
+      dockerfile: testsshd.Dockerfile
+    ports:
+      - "127.0.0.1:24622:22"
