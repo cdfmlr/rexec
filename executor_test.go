@@ -333,7 +333,7 @@ func TestExecutor_Execute(t *testing.T) {
 				executor: &ShellExecutor{
 					ShellPath: "ssh",
 					ShellArgs: []string{
-						"-o", "StrictHostKeyChecking=no",
+						"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-q",
 						"-o", "PasswordAuthentication=no",
 						"-i", "./testsshd/testsshd.id_rsa",
 						"-p", "24622", "root@localhost",
@@ -363,7 +363,7 @@ func TestExecutor_Execute(t *testing.T) {
 				executor: &ShellExecutor{
 					ShellPath: "ssh",
 					ShellArgs: []string{
-						"-o", "StrictHostKeyChecking=no",
+						"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-q",
 						"-o", "PasswordAuthentication=no",
 						"-i", "./testsshd/testsshd.id_rsa",
 						"-p", "24622", "root@localhost",
@@ -389,7 +389,7 @@ func TestExecutor_Execute(t *testing.T) {
 				executor: &ShellExecutor{
 					ShellPath: "ssh",
 					ShellArgs: []string{
-						"-o", "StrictHostKeyChecking=no",
+						"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-q",
 						"-o", "PasswordAuthentication=no",
 						"-i", "./testsshd/testsshd.id_rsa",
 						"-p", "24622", "root@localhost",
@@ -419,7 +419,7 @@ func TestExecutor_Execute(t *testing.T) {
 				executor: &ShellExecutor{
 					ShellPath: "ssh",
 					ShellArgs: []string{
-						"-o", "StrictHostKeyChecking=no",
+						"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-q",
 						"-o", "PasswordAuthentication=no",
 						"-i", "./testsshd/testsshd.id_rsa",
 						"-p", "24622", "root@localhost",
@@ -446,7 +446,7 @@ func TestExecutor_Execute(t *testing.T) {
 				executor: &ShellExecutor{
 					ShellPath: "ssh",
 					ShellArgs: []string{
-						"-o", "StrictHostKeyChecking=no",
+						"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-q",
 						"-o", "PasswordAuthentication=no",
 						"-i", "./testsshd/testsshd.id_rsa",
 						"-p", "24622", "root@localhost",
@@ -474,7 +474,7 @@ func TestExecutor_Execute(t *testing.T) {
 				executor: &ShellExecutor{
 					ShellPath: "ssh",
 					ShellArgs: []string{
-						"-o", "StrictHostKeyChecking=no",
+						"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-q",
 						"-o", "PasswordAuthentication=no",
 						"-i", "./testsshd/testsshd.id_rsa",
 						"-p", "24622", "root@localhost",
@@ -1013,7 +1013,7 @@ func TestExecutor_Execute_cancel(t *testing.T) {
 				executor: &ShellExecutor{
 					ShellPath: "ssh",
 					ShellArgs: []string{
-						"-o", "StrictHostKeyChecking=no",
+						"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-q",
 						"-o", "PasswordAuthentication=no",
 						"-i", "./testsshd/testsshd.id_rsa",
 						"-p", "24622", "root@localhost",
@@ -1205,7 +1205,7 @@ func Test_singleCommandMultiExecute(t *testing.T) {
 		&ShellExecutor{
 			ShellPath: "ssh",
 			ShellArgs: []string{
-				"-o", "StrictHostKeyChecking=no",
+				"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-q",
 				"-o", "PasswordAuthentication=no",
 				"-i", "./testsshd/testsshd.id_rsa",
 				"-p", "24622", "root@localhost",
@@ -1297,6 +1297,8 @@ func Test_singleCommandMultiExecute(t *testing.T) {
 //
 // To start a sshd server on localhost:24622 (see testsshd/README.md for more details).
 func TestImmediateSshExecutor_closing(t *testing.T) {
+	// t.Skipf("Skipping TestImmediateSshExecutor_closing temporarily: it take ~1min to run.")
+
 	testSshMu.Lock()
 	defer testSshMu.Unlock()
 	testSshTestServer(t)
@@ -1315,7 +1317,9 @@ func TestImmediateSshExecutor_closing(t *testing.T) {
 
 	// run lsof @ remote host to count open connections
 	var lsofCount = func() (int, error) {
-		lsofCmdStr := "lsof -i :22 | wc -l" // alpine busybox ignores -i, but it's fine for this test
+		// lsofCmdStr := "lsof -i :22 | wc -l" // alpine busybox ignores -i, but it's fine for this test
+		// lsofCmdStr := "for p in 22 24622; do lsof -i :${p}; done | tee rexec_TestImmediateSshExecuator_closing_dbg.$(date +%s) | wc -l"
+		lsofCmdStr := "for p in 22 24622; do lsof -i :${p}; done | wc -l"
 		var stdout bytes.Buffer
 		cmd := &Command{
 			Command: lsofCmdStr,
@@ -1424,7 +1428,7 @@ func BenchmarkExecutors(b *testing.B) {
 		"externalSsh": &ShellExecutor{
 			ShellPath: "ssh",
 			ShellArgs: []string{
-				"-o", "StrictHostKeyChecking=no",
+				"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-q",
 				"-o", "PasswordAuthentication=no",
 				"-i", "./testsshd/testsshd.id_rsa",
 				"-p", "24622", "root@localhost",
@@ -1560,7 +1564,7 @@ func ExampleShellExecutor_Execute_ssh() {
 	executor := &ShellExecutor{
 		ShellPath: "ssh",
 		ShellArgs: []string{
-			"-o", "StrictHostKeyChecking=no",
+			"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-q",
 			"-o", "PasswordAuthentication=no",
 			"-i", "./testsshd/testsshd.id_rsa",
 			"-p", "24622", "root@localhost",

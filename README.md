@@ -146,17 +146,41 @@ rexec.Logger = slog.Default().With("pkg", "rexec")
 
 Set `useDebugLogger` in `logger.go` for built-in debug output during development.
 
-### Testing SSH helpers (dev only)
+### Testing SSH (dev only)
 
-To run rexec tests involving SSH, we need to spin up a test SSH server
-that defined in `testsshd/`.
+To run rexec tests involving SSH, we need to spin up a test SSH server (sshd):
 
-It relies on Docker Compose to start the service on localhost:24622. 
+- Listening on `localhost:24622`
+- Accepting username `root` with password `root` or private key `./testsshd/testsshd.id_rsa`
+
+As v2.1.0 onwards, `rexec` includes two setups for the testsshd server:
+
+1. `"internal"`: an in-process SSH server implemented in Go, located at `internal/testsshd`. 
+   This server is lightweight and does not require Docker. 
+   See `internal/testsshd/README.md` for usage details.
+2. `"docker"`: A Docker-based SSH server located at `testsshd/`. 
+   This is a more realistic SSH server setup for testing purposes.
+
+It is set to try the `"docker"` testsshd server by default in tests. 
+(We actually just try to connect to `localhost:24622`, if it works, we use it. 
+We don't really care whether it's a container or not, so you can forward the 
+port to any sshd server you like, as long as it accepts the test credentials.)
+If the `localhost:24622` service is not available,
+it falls back to the `"internal"` testsshd service which should always work
+(but may not as realistic as a real OpenSSH server in the container).
+
+To start the Docker-based testsshd server,
 Make sure you have Docker installed and running, then:
 
 ```bash
 cd testsshd
 docker compose -f testsshd-docker-compose.yml up
+```
+
+To test the testsshd service itself, run the following test:
+
+```bash
+go test -test.run=Test_testsshd -v .
 ```
 
 See `testsshd/README.md` for details.

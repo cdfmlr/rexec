@@ -367,3 +367,44 @@ func TestServer_bothPasswordAndKey(t *testing.T) {
 	client.Close()
 	t.Logf("✅ Connected with password")
 }
+
+func Test_hijackWriter_Write(t *testing.T) {
+	t.Run("nilMapper", func(t *testing.T) {
+		var buf bytes.Buffer
+		h := &hijackWriter{
+			underlying: &buf,
+			mapper:     nil,
+		}
+
+		n, err := h.Write([]byte("hello"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if n != 5 {
+			t.Fatalf("expected to write 5 bytes, wrote %d", n)
+		}
+		if buf.String() != "hello" {
+			t.Fatalf("expected buffer to contain 'hello', got %q", buf.String())
+		}
+	})
+	t.Run("withMapper", func(t *testing.T) {
+		var buf bytes.Buffer
+		h := &hijackWriter{
+			underlying: &buf,
+			mapper: func(p []byte) []byte {
+				return bytes.ToUpper(p)
+			},
+		}
+
+		n, err := h.Write([]byte("hello"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if n != 5 {
+			t.Fatalf("expected to write 5 bytes, wrote %d", n)
+		}
+		if buf.String() != "HELLO" {
+			t.Fatalf("expected buffer to contain 'HELLO', got %q", buf.String())
+		}
+	})
+}

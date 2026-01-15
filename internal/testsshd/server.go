@@ -4,8 +4,12 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
+	"io"
+	"log/slog"
 	"net"
 	"os/exec"
+	"regexp"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -184,6 +188,42 @@ func (s *Server) handleConn(netConn net.Conn) {
 	}
 }
 
+type hijackWriter struct {
+	underlying io.Writer
+	mapper     func([]byte) []byte
+}
+
+func (hw *hijackWriter) Write(p []byte) (n int, err error) {
+	var mapped = p
+	if hw.mapper != nil {
+		mapped = hw.mapper(p)
+	}
+
+	return hw.underlying.Write(mapped)
+}
+
+// stderrModifier tweaks stderr output to:
+//
+//  1. make it looks like a `ash` shell;
+//  2. remove ssh host key verification warnings;
+//
+// This is for compatibility with the docker testsshd setup.
+func stderrModifier(p []byte) []byte {
+	s := string(p)
+	slog.Debug("modifying stderr output", "original", string(p))
+
+	cmdNotFoundPattern := regexp.MustCompile(`sh: (.*?): command not found`)
+	matches := cmdNotFoundPattern.FindStringSubmatch(s)
+	slog.Warn("modifying stderr output to mimic ash shell", "matches", fmt.Sprintf("%#v", matches))
+	if len(matches) == 2 {
+		s = strings.ReplaceAll(s, matches[0], fmt.Sprintf("ash: %s: not found", matches[1]))
+	}
+
+	p = []byte(s)
+
+	return p
+}
+
 func handleSession(ch ssh.Channel, reqs <-chan *ssh.Request) {
 	defer ch.Close()
 	for req := range reqs {
@@ -192,9 +232,13 @@ func handleSession(ch ssh.Channel, reqs <-chan *ssh.Request) {
 			ssh.Unmarshal(req.Payload, &payload)
 			req.Reply(true, nil)
 			cmd := exec.Command("sh", "-c", payload.Cmd)
+
 			cmd.Stdin = ch
 			cmd.Stdout = ch
-			cmd.Stderr = ch.Stderr()
+			cmd.Stderr = &hijackWriter{ // hijack and tweak stderr output
+				underlying: ch.Stderr(),
+				mapper:     stderrModifier,
+			}
 
 			status := struct{ Status uint32 }{Status: 0}
 			if err := cmd.Run(); err != nil {

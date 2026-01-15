@@ -36,7 +36,7 @@ const (
 // other values will cause undefined behavior.  // (actually, it will finally fallback to require manual docker setup.)
 var (
 	preferredTestsshd = testsshdDocker
-	fallbackTestsshd  = testsshdDocker // testsshdInternal is not ready yet.
+	fallbackTestsshd  = testsshdInternal
 )
 
 func init() {
@@ -153,7 +153,7 @@ func testSshTestServer(t *testing.T) (cancel context.CancelFunc) {
 	err := setupTestsshd(ctx, t)
 	if err != nil {
 		cancel()
-		t.Logf("⚠️  setupTestsshd failed: %v", err)
+		t.Errorf("⚠️  setupTestsshd failed: %v", err)
 	}
 
 	// hint is an error message when the testsshd is not running.
