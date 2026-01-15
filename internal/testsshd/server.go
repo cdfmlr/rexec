@@ -11,25 +11,18 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// Server is a simple SSH server for testing purposes.
+//
+// It supports password and public key authentication.
+// Executed commands are run locally on the host machine.
+//
+// The zero value or literal is not usable. Use New to create a decent server.
 type Server struct {
 	listener net.Listener
 	config   *ssh.ServerConfig
 }
 
-// User represents a user account on the test SSH server.
-type User struct {
-	// Username is the username to accept.
-	Username string
-
-	// Password is the password to accept. If empty, password auth is disabled for this user.
-	Password string
-
-	// PrivateKey is the PEM-encoded private key for public key authentication.
-	// If empty, public key auth is disabled for this user.
-	PrivateKey []byte
-}
-
-// Config holds the configuration for the test SSH server.
+// Config for the test SSH server.
 type Config struct {
 	// Addr is the address to listen on. Use "127.0.0.1:0" for a random port.
 	// Default: "127.0.0.1:0"
@@ -42,9 +35,17 @@ type Config struct {
 	HostKey ssh.Signer
 }
 
-// NewTestServer creates an SSH server with default settings (random port, password "test").
-func NewTestServer() (*Server, error) {
-	return NewTestServerWithConfig(nil)
+// User account on the test SSH server.
+type User struct {
+	// Username is the username to accept.
+	Username string
+
+	// Password is the password to accept. If empty, password auth is disabled for this user.
+	Password string
+
+	// PrivateKey is the PEM-encoded private key for public key authentication.
+	// If empty, public key auth is disabled for this user.
+	PrivateKey []byte
 }
 
 // Deprecated: TODO: NOT THE BUSINESS OF THIS PACKAGE.
@@ -61,7 +62,7 @@ func NewDockerCompatibleServer() (*Server, error) {
 	keyBytes, err := os.ReadFile("./testsshd/testsshd.id_rsa")
 	if err != nil {
 		// Fall back to default if key not found
-		return NewTestServerWithConfig(&Config{
+		return New(&Config{
 			Addr: "127.0.0.1:0",
 			Users: []User{
 				{Username: "root", Password: "test"},
@@ -76,18 +77,20 @@ func NewDockerCompatibleServer() (*Server, error) {
 		},
 	}
 
-	srv, err := NewTestServerWithConfig(cfg)
+	srv, err := New(cfg)
 	if err != nil {
 		// Fall back to random port if 24622 is busy
 		cfg.Addr = "127.0.0.1:0"
-		return NewTestServerWithConfig(cfg)
+		return New(cfg)
 	}
 
 	return srv, nil
 }
 
-// NewTestServerWithConfig creates an SSH server with custom configuration.
-func NewTestServerWithConfig(cfg *Config) (*Server, error) {
+// New creates an SSH server with custom configuration.
+//
+// Pass nil to use default settings: creates an SSH server with random port, user "testuser" and password "test".
+func New(cfg *Config) (*Server, error) {
 	if cfg == nil {
 		cfg = &Config{}
 	}
@@ -167,6 +170,25 @@ func (s *Server) Addr() string {
 	return s.listener.Addr().String()
 }
 
+// Port returns the port number the server is listening on.
+// If the port cannot be determined, it returns -1.
+func (s *Server) Port() int {
+	addr, ok := s.listener.Addr().(*net.TCPAddr)
+	if ok {
+		return addr.Port
+	}
+	// Fallback: parse from string
+	_, portStr, err := net.SplitHostPort(s.listener.Addr().String())
+	if err == nil && portStr != "" {
+		var port int
+		if _, err := fmt.Sscanf(portStr, "%d", &port); err == nil {
+			return port
+		}
+	}
+	// ???
+	return -1
+}
+
 func (s *Server) Close() error {
 	return s.listener.Close()
 }
@@ -217,8 +239,8 @@ func handleSession(ch ssh.Channel, reqs <-chan *ssh.Request) {
 	}
 }
 
+// Generate an ephemeral RSA key for the SSH server host key
 func generateHostKey() (ssh.Signer, error) {
-	// Generate an ephemeral RSA key for the SSH server host key
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate RSA key: %w", err)

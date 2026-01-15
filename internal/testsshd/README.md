@@ -1,6 +1,6 @@
 # testsshd - In-Process SSH Server for Testing
 
-This package provides a lightweight, in-process SSH server for testing without requiring Docker or external dependencies.
+This package provides a lightweight, in-process SSH server for testing without requiring external dependencies.
 
 ## Features
 
@@ -8,7 +8,7 @@ This package provides a lightweight, in-process SSH server for testing without r
 - **Multiple users**: Support for multiple user accounts with different credentials
 - **Flexible authentication**: Password and public key authentication
 - **Random ports**: Automatically assigns free ports (or use fixed ports)
-- **Command execution**: Executes real shell commands via `sh -c`
+- **Command execution**: Executes real shell commands via `sh -c` on the local machine (localhost that runs the server)
 
 ## Usage
 
@@ -22,7 +22,7 @@ func TestMySSHFeature(t *testing.T) {
     // - Random port (127.0.0.1:0)
     // - Username: "testuser"
     // - Password: "test"
-    srv, err := testsshd.NewTestServer()
+    srv, err := testsshd.New(nil)
     if err != nil {
         t.Fatal(err)
     }
@@ -39,7 +39,7 @@ func TestMySSHFeature(t *testing.T) {
 
 ```go
 // Single user with password
-srv, err := testsshd.NewTestServerWithConfig(&testsshd.Config{
+srv, err := testsshd.New(&testsshd.Config{
     Addr: "127.0.0.1:0", // random port
     Users: []testsshd.User{
         {Username: "alice", Password: "secret123"},
@@ -48,7 +48,7 @@ srv, err := testsshd.NewTestServerWithConfig(&testsshd.Config{
 
 // Multiple users with different auth methods
 keyBytes, _ := os.ReadFile("./test_key")
-srv, err := testsshd.NewTestServerWithConfig(&testsshd.Config{
+srv, err := testsshd.New(&testsshd.Config{
     Addr: "127.0.0.1:2222", // fixed port
     Users: []testsshd.User{
         {Username: "alice", Password: "alice123"},
@@ -57,63 +57,6 @@ srv, err := testsshd.NewTestServerWithConfig(&testsshd.Config{
     },
 })
 ```
-
-### Docker-Compatible Server
-
-For backward compatibility with existing tests that expect a Docker-based SSH server on port 24622:
-
-```go
-// Attempts to start on 127.0.0.1:24622 with root user
-// Falls back to random port if 24622 is busy
-// Uses ./testsshd/testsshd.id_rsa if available, otherwise password auth
-srv, err := testsshd.NewDockerCompatibleServer()
-if err != nil {
-    t.Fatal(err)
-}
-defer srv.Close()
-
-// Connect as "root" with either:
-// - Private key from ./testsshd/testsshd.id_rsa
-// - Password "test" (fallback)
-```
-
-## API
-
-### Types
-
-**`User`**
-```go
-type User struct {
-    Username   string // Required
-    Password   string // Optional: enables password auth
-    PrivateKey []byte // Optional: enables public key auth (PEM format)
-}
-```
-
-**`Config`**
-```go
-type Config struct {
-    Addr     string      // Default: "127.0.0.1:0" (random port)
-    Users    []User      // Default: [{Username: "testuser", Password: "test"}]
-    HostKey  ssh.Signer  // Default: auto-generated RSA key
-}
-```
-
-**`Server`**
-```go
-type Server struct {
-    // ...
-}
-
-func (s *Server) Addr() string      // Get actual listening address
-func (s *Server) Close() error      // Stop server
-```
-
-### Functions
-
-- `NewTestServer() (*Server, error)` - Create server with default settings
-- `NewTestServerWithConfig(cfg *Config) (*Server, error)` - Create server with custom config
-- `NewDockerCompatibleServer() (*Server, error)` - Create Docker-compatible server
 
 ## Examples
 
