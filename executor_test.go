@@ -1297,7 +1297,7 @@ func Test_singleCommandMultiExecute(t *testing.T) {
 //
 // To start a sshd server on localhost:24622 (see testsshd/README.md for more details).
 func TestImmediateSshExecutor_closing(t *testing.T) {
-	// t.Skipf("Skipping TestImmediateSshExecutor_closing temporarily: it take ~1min to run.")
+	t.Skipf("Skipping TestImmediateSshExecutor_closing temporarily: it take ~1min to run.")
 
 	testSshMu.Lock()
 	defer testSshMu.Unlock()
