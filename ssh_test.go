@@ -65,6 +65,7 @@ func init() {
 			os.Exit(1)
 		}
 	}
+	slog.Info("⚙️ using testsshd setup", "type", useTestsshd)
 	if err := tryConnectTestsshd(); err != nil {
 		slog.Error("❌ testsshd is not running on localhost:24622", "error", err)
 		slog.Info(hint)

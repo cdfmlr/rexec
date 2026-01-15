@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	osexec "os/exec"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // Executor executes given command.
@@ -87,6 +88,9 @@ func (e *LocalExecutor) Execute(ctx context.Context, cmd *Command) error {
 	// are set on the process directly.
 	proc.Dir = cmd.Workdir
 	proc.Env = envSlice(cmd.Env)
+	if len(proc.Env) == 0 {
+		proc.Env = nil // use the parent process's environment
+	}
 
 	proc.Stdin = cmd.Stdin
 	proc.Stdout = cmd.Stdout
