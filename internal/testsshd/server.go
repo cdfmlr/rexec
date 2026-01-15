@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"net"
-	"os"
 	"os/exec"
 
 	"golang.org/x/crypto/ssh"
@@ -48,48 +47,11 @@ type User struct {
 	PrivateKey []byte
 }
 
-// Deprecated: TODO: NOT THE BUSINESS OF THIS PACKAGE.
-// NewDockerCompatibleServer creates an SSH server that mimics the Docker testsshd
-// setup used in existing tests: listening on 127.0.0.1:24622 with root user
-// authenticated via ./testsshd/testsshd.id_rsa private key.
-//
-// This is a convenience function to replace the Docker-based test server without
-// changing existing test code.
-//
-// If the private key file is not found or port 24622 is busy, it falls back to
-// a random port with default password authentication.
-func NewDockerCompatibleServer() (*Server, error) {
-	keyBytes, err := os.ReadFile("./testsshd/testsshd.id_rsa")
-	if err != nil {
-		// Fall back to default if key not found
-		return New(&Config{
-			Addr: "127.0.0.1:0",
-			Users: []User{
-				{Username: "root", Password: "test"},
-			},
-		})
-	}
-
-	cfg := &Config{
-		Addr: "127.0.0.1:24622",
-		Users: []User{
-			{Username: "root", PrivateKey: keyBytes},
-		},
-	}
-
-	srv, err := New(cfg)
-	if err != nil {
-		// Fall back to random port if 24622 is busy
-		cfg.Addr = "127.0.0.1:0"
-		return New(cfg)
-	}
-
-	return srv, nil
-}
-
 // New creates an SSH server with custom configuration.
 //
 // Pass nil to use default settings: creates an SSH server with random port, user "testuser" and password "test".
+//
+// New starts the service immediately in a new goroutine and returns the Server instance.
 func New(cfg *Config) (*Server, error) {
 	if cfg == nil {
 		cfg = &Config{}
@@ -226,13 +188,23 @@ func handleSession(ch ssh.Channel, reqs <-chan *ssh.Request) {
 	defer ch.Close()
 	for req := range reqs {
 		if req.Type == "exec" {
-			cmd := string(req.Payload[4:]) // skip length prefix
+			var payload struct{ Cmd string }
+			ssh.Unmarshal(req.Payload, &payload)
 			req.Reply(true, nil)
+			cmd := exec.Command("sh", "-c", payload.Cmd)
+			cmd.Stdout = ch
+			cmd.Stderr = ch.Stderr()
 
-			// Execute command locally or return mock output
-			out, _ := exec.Command("sh", "-c", cmd).CombinedOutput()
-			ch.Write(out)
-			ch.SendRequest("exit-status", false, ssh.Marshal(struct{ Status uint32 }{0}))
+			status := struct{ Status uint32 }{Status: 0}
+			if err := cmd.Run(); err != nil {
+				if exitErr, ok := err.(*exec.ExitError); ok {
+					status.Status = uint32(exitErr.ExitCode())
+				} else {
+					status.Status = 1
+				}
+			}
+
+			ch.SendRequest("exit-status", false, ssh.Marshal(status))
 			return
 		}
 		req.Reply(false, nil)

@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"testing"
-	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -251,48 +250,6 @@ func TestSshClientConfig_FromJson(t *testing.T) {
 	}
 
 	t.Logf("✅ Output() returned %q, expected %q", r, "hello\n")
-}
-
-// testSshTestServer checks if the testsshd is running.
-func testSshTestServer(t *testing.T) {
-	t.Helper()
-
-	// hint is an error message when the testsshd is not running.
-	hint := `rexec tests require a running testsshd service on localhost:24622.
-To start it, run the following commands:
-
-    # install docker and docker-compose-plugin if you don't have them.
-	cd ./testsshd
-	docker compose -f testsshd-docker-compose.yml up -d
-
-See testsshd/README.md for more details.
-`
-
-	// we should avoid using any of the rexec features here
-	// because we are testing rexec itself.
-	conn, err := ssh.Dial("tcp", "localhost:24622", &ssh.ClientConfig{
-		User: "root",
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeysCallback(func() ([]ssh.Signer, error) {
-				key, err := os.ReadFile("./testsshd/testsshd.id_rsa")
-				if err != nil {
-					return nil, err
-				}
-				signer, err := ssh.ParsePrivateKey(key)
-				if err != nil {
-					return nil, err
-				}
-				return []ssh.Signer{signer}, nil
-			}),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         5 * time.Second,
-	})
-	if err != nil {
-		t.Fatalf("❌ testsshd is not running on localhost:24622: %v\n\n%s", err, hint)
-	}
-	defer conn.Close()
-	t.Logf("✅ testsshd is running on localhost:24622")
 }
 
 // An example to use SshAuth.AuthMethod with

@@ -13,10 +13,6 @@ import (
 	"time"
 )
 
-// TestImmediateSshExecutor_closing takes writer Lock.
-// other test takes a reader RLock.
-var testSshMu sync.RWMutex
-
 // Prerequisites:
 //
 //	cd ./testsshd && docker compose -f testsshd-docker-compose.yml up

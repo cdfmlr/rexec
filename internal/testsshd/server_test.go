@@ -264,52 +264,22 @@ func TestServer_wrongPassword(t *testing.T) {
 	t.Logf("✅ Connection correctly rejected with wrong password: %v", err)
 }
 
-func TestNewDockerCompatibleServer(t *testing.T) {
-	srv, err := NewDockerCompatibleServer()
-	if err != nil {
-		t.Fatalf("failed to create Docker-compatible server: %v", err)
-	}
-	defer srv.Close()
-
-	t.Logf("✅ Server listening on %s", srv.Addr())
-
-	// Read the test private key for authentication
+func TestServer_bothPasswordAndKey(t *testing.T) {
+	// Read the test private key
 	keyBytes, err := os.ReadFile("../../testsshd/testsshd.id_rsa")
 	if err != nil {
-		t.Logf("Note: testsshd.id_rsa not found, server has fallen back to password auth")
-		// Try password auth as fallback
-		client, err := ssh.Dial("tcp", srv.Addr(), &ssh.ClientConfig{
-			User: "root",
-			Auth: []ssh.AuthMethod{
-				ssh.Password("test"),
-			},
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		})
-		if err != nil {
-			t.Fatalf("failed to connect with fallback password: %v", err)
-		}
-		defer client.Close()
-		t.Logf("✅ Connected with fallback password authentication")
-
-		// Test running a command
-		session, err := client.NewSession()
-		if err != nil {
-			t.Fatalf("failed to create session: %v", err)
-		}
-		defer session.Close()
-
-		output, err := session.Output("echo hello")
-		if err != nil {
-			t.Fatalf("failed to execute command: %v", err)
-		}
-
-		if string(output) != "hello\n" {
-			t.Errorf("expected output %q, got %q", "hello\n", string(output))
-		}
-
-		t.Logf("✅ Command executed successfully")
-		return
+		t.Skipf("skipping test: testsshd.id_rsa not found: %v", err)
 	}
+
+	srv, err := New(&Config{
+		Users: []User{
+			{Username: "root", Password: "root", PrivateKey: keyBytes},
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to create test server: %v", err)
+	}
+	defer srv.Close()
 
 	// Parse the private key for authentication
 	signer, err := ssh.ParsePrivateKey(keyBytes)
@@ -317,37 +287,31 @@ func TestNewDockerCompatibleServer(t *testing.T) {
 		t.Fatalf("failed to parse private key: %v", err)
 	}
 
-	// Test connection with public key auth (also try password as fallback)
+	// Test connection with public key auth
 	client, err := ssh.Dial("tcp", srv.Addr(), &ssh.ClientConfig{
 		User: "root",
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
-			ssh.Password("test"), // fallback
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
-		t.Fatalf("failed to connect: %v", err)
+		t.Fatalf("failed to connect with public key: %v", err)
 	}
-	defer client.Close()
+	client.Close()
+	t.Logf("✅ Connected with private key")
 
-	t.Logf("✅ Connected with authentication (Docker-compatible)")
-
-	// Test running a command
-	session, err := client.NewSession()
+	// Test connection with password auth
+	client, err = ssh.Dial("tcp", srv.Addr(), &ssh.ClientConfig{
+		User: "root",
+		Auth: []ssh.AuthMethod{
+			ssh.Password("root"),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	})
 	if err != nil {
-		t.Fatalf("failed to create session: %v", err)
+		t.Fatalf("failed to connect with password: %v", err)
 	}
-	defer session.Close()
-
-	output, err := session.Output("echo hello")
-	if err != nil {
-		t.Fatalf("failed to execute command: %v", err)
-	}
-
-	if string(output) != "hello\n" {
-		t.Errorf("expected output %q, got %q", "hello\n", string(output))
-	}
-
-	t.Logf("✅ Command executed successfully")
+	client.Close()
+	t.Logf("✅ Connected with password")
 }
