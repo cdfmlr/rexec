@@ -192,6 +192,7 @@ func handleSession(ch ssh.Channel, reqs <-chan *ssh.Request) {
 			ssh.Unmarshal(req.Payload, &payload)
 			req.Reply(true, nil)
 			cmd := exec.Command("sh", "-c", payload.Cmd)
+			cmd.Stdin = ch
 			cmd.Stdout = ch
 			cmd.Stderr = ch.Stderr()
 

@@ -1,6 +1,7 @@
 package testsshd
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
@@ -236,6 +237,57 @@ func TestServer_execCommand(t *testing.T) {
 	}
 
 	t.Logf("✅ Command executed successfully: %q", string(output))
+}
+
+func TestServer_stdio(t *testing.T) {
+	srv, err := New(nil)
+	if err != nil {
+		t.Fatalf("failed to create test server: %v", err)
+	}
+	defer srv.Close()
+
+	client, err := ssh.Dial("tcp", srv.Addr(), &ssh.ClientConfig{
+		User: "testuser",
+		Auth: []ssh.AuthMethod{
+			ssh.Password("test"),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	})
+	if err != nil {
+		t.Fatalf("failed to connect: %v", err)
+	}
+	defer client.Close()
+
+	session, err := client.NewSession()
+	if err != nil {
+		t.Fatalf("failed to create session: %v", err)
+	}
+	defer session.Close()
+
+	// stdin, stdout, stderr should be tested here
+
+	var stdinBuf = bytes.NewBufferString("ci")
+	var stdoutBuf = &bytes.Buffer{}
+	var stderrBuf = &bytes.Buffer{}
+
+	session.Stdin = stdinBuf
+	session.Stdout = stdoutBuf
+	session.Stderr = stderrBuf
+
+	err = session.Run("cat && echo allo && echo world 1>&2")
+	if err != nil {
+		t.Fatalf("failed to run command: %v", err)
+	}
+
+	t.Logf("got stdout=%q, stderr=%q", stdoutBuf.String(), stderrBuf.String())
+
+	if stdoutBuf.String() != "ciallo\n" {
+		t.Errorf("expected stdout 'ciallo\\n', got %q", stdoutBuf.String())
+	}
+
+	if stderrBuf.String() != "world\n" {
+		t.Errorf("expected stderr 'world', got %q", stderrBuf.String())
+	}
 }
 
 func TestServer_wrongPassword(t *testing.T) {
