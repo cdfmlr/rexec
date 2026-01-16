@@ -2,10 +2,11 @@ package rexec
 
 import (
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // SshClientConfig contains the configuration for the SSH client.
@@ -26,6 +27,38 @@ type SshClientConfig struct {
 	// connection alive.
 	// As for now, only KeepAliveSshExecutor supports this.
 	KeepAlive SshKeepAliveConfig
+
+	// HostKeyCheck is the configuration for host key checking.
+	// If nil, host key checking is disabled (insecure, do not use in production).
+	// If not nil, host key checking is enabled according to the configuration.
+	HostKeyCheck *SshHostKeyCheckConfig
+}
+
+// SshHostKeyCheckConfig contains the configuration for host key checking.
+//
+// One of FixedHostKey or KnownHostsPath should be set to enable host key
+// checking.
+//
+// A nil/zero config means using the default known_hosts,
+// which trys to read from ~/.ssh/known_hosts and /etc/ssh/ssh_known_hosts if
+// exist, or it denies all host keys (which makes all connections fail).
+//
+// If multiple fields are set, the priority is:
+//
+//	FixedHostKey > KnownHostsPath
+//
+// That is, the first non-empty field will be used for host key checking, and
+// the rest will be ignored.
+type SshHostKeyCheckConfig struct {
+	// FixedHostKey is an "ssh-ed25519 ..." you got from
+	// `ssh-keyscan <server-ip>` (excluding the IP address part)
+	FixedHostKey string
+	// KnownHostsPath is a list of paths to the known_hosts files,
+	// usually ~/.ssh/known_hosts and /etc/ssh/ssh_known_hosts
+	KnownHostsPath []string
+	// InsecureIgnore can be set to true to disable host key checking.
+	// Insecure, do not use in production.
+	InsecureIgnore bool
 }
 
 // Timeout converts the TimeoutSeconds to time.Duration.
@@ -43,13 +76,13 @@ func validateSshClientConfig(c *SshClientConfig) error {
 		return fmt.Errorf("addr is empty")
 	}
 	// user is not required.
-	//if c.User == "" {
+	// if c.User == "" {
 	//	return fmt.Errorf("user is empty")
-	//}
+	// }
 	// so is auth.
-	//if len(c.Auth) == 0 {
+	// if len(c.Auth) == 0 {
 	//	return fmt.Errorf("auth is empty")
-	//}
+	// }
 	return nil
 }
 
@@ -172,7 +205,7 @@ func (a *SshAuth) Prepare() (err error) {
 	if a.PrivateKeyPath != "" {
 		key, err := os.ReadFile(a.PrivateKeyPath)
 		if err != nil {
-			//log.Fatalf("unable to read private key: %v", err)
+			// log.Fatalf("unable to read private key: %v", err)
 			return fmt.Errorf("unable to read private key: %w", err)
 		}
 		if len(key) == 0 {
@@ -191,7 +224,7 @@ func (a *SshAuth) Prepare() (err error) {
 		key := []byte(a.PrivateKey)
 		signer, err := ssh.ParsePrivateKey(key)
 		if err != nil {
-			//log.Fatalf("unable to parse private key: %v", err)
+			// log.Fatalf("unable to parse private key: %v", err)
 			return fmt.Errorf("unable to parse private key: %w", err)
 		}
 
@@ -208,9 +241,9 @@ func (a *SshAuth) Prepare() (err error) {
 // It panics if Prepare() was not called before.
 func (a *SshAuth) AuthMethod() ssh.AuthMethod {
 	if a.authMethod == nil {
-		//if err := a.Prepare(); err != nil {
+		// if err := a.Prepare(); err != nil {
 		//	panic(err)
-		//}
+		// }
 		// always panic to force the user to call Prepare()
 		panic("AuthMethod called before prepare()")
 	}

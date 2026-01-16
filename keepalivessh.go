@@ -2,9 +2,10 @@ package rexec
 
 import (
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // This file implements an SSH client that will keep the connection alive and
@@ -196,13 +197,18 @@ func dialSsh(config *SshClientConfig) (*ssh.Client, error) {
 			Logger.Warn("failed to prepare SSH auth methods", "err", authErr)
 		}
 	}
-
-	return ssh.Dial("tcp", config.Addr, &ssh.ClientConfig{
+	hostKeyCheck, err := hostKeyCallback(config.HostKeyCheck)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare SSH host key callback: %w", err)
+	}
+	clientConfig := &ssh.ClientConfig{
 		User:            config.User,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO: InsecureIgnoreHostKey is insecure.
 		Auth:            authMethods,
 		Timeout:         config.Timeout(),
-	})
+		HostKeyCallback: hostKeyCheck,
+	}
+
+	return ssh.Dial("tcp", config.Addr, clientConfig)
 }
 
 // sshClientString returns a string representation of the SSH client.

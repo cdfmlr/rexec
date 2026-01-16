@@ -115,7 +115,7 @@ func New(cfg *Config) (*Server, error) {
 	hostKey := cfg.HostKey
 	if hostKey == nil {
 		var err error
-		hostKey, err = generateHostKey()
+		hostKey, err = GenerateHostKey()
 		if err != nil {
 			return nil, err
 		}
@@ -256,8 +256,8 @@ func handleSession(ch ssh.Channel, reqs <-chan *ssh.Request) {
 	}
 }
 
-// Generate an ephemeral RSA key for the SSH server host key
-func generateHostKey() (ssh.Signer, error) {
+// GenerateHostKey generate an ephemeral RSA key for the SSH server host key
+func GenerateHostKey() (ssh.Signer, error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate RSA key: %w", err)

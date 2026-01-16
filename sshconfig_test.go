@@ -1,12 +1,15 @@
 package rexec
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/cdfmlr/rexec/v2/internal/testsshd"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -250,6 +253,347 @@ func TestSshClientConfig_FromJson(t *testing.T) {
 	}
 
 	t.Logf("✅ Output() returned %q, expected %q", r, "hello\n")
+}
+
+func TestHostKey(t *testing.T) {
+	// shared test user and host keys
+
+	testUser := testsshd.User{Username: "foo", Password: "bar"}
+
+	hostKey1, err := testsshd.GenerateHostKey()
+	if err != nil {
+		t.Fatalf("❌ failed to generate a host key: %v", err)
+	}
+	hostKey2, err := testsshd.GenerateHostKey()
+	if err != nil {
+		t.Fatalf("❌ failed to generate a host key: %v", err)
+	}
+
+	// assert hostKey1 != hostKey2
+	if string(hostKey1.PublicKey().Marshal()) == string(hostKey2.PublicKey().Marshal()) {
+		t.Fatalf("❌ generated host keys are the same, expected different")
+	}
+
+	// sshd1 use hostKey1
+	sshd1, err := testsshd.New(&testsshd.Config{
+		Users:   []testsshd.User{testUser},
+		HostKey: hostKey1,
+	})
+	if err != nil {
+		t.Fatalf("❌ failed to start a random testsshd: %v", err)
+	}
+	// sshd2 use hostKey2
+	sshd2, err := testsshd.New(&testsshd.Config{
+		Users:   []testsshd.User{testUser},
+		HostKey: hostKey2,
+	})
+	if err != nil {
+		t.Fatalf("❌ failed to start a random testsshd: %v", err)
+	}
+
+	t.Run("defaultConfig", func(t *testing.T) {
+		testcases := []hostKeyTestcase{
+			{
+				name:                "nil",
+				addr:                sshd1.Addr(),
+				user:                testUser,
+				checking:            nil,
+				expectedError:       true,
+				expectedErrContains: []string{"handshake failed", "key is unknown"},
+			},
+			{
+				name:                "empty",
+				addr:                sshd2.Addr(),
+				user:                testUser,
+				checking:            &SshHostKeyCheckConfig{},
+				expectedError:       true,
+				expectedErrContains: []string{"handshake failed", "key is unknown"},
+			},
+			{
+				name: "zero",
+				addr: sshd1.Addr(),
+				user: testUser,
+				checking: &SshHostKeyCheckConfig{
+					FixedHostKey:   "",
+					KnownHostsPath: []string{},
+					InsecureIgnore: false,
+				},
+				expectedError:       true,
+				expectedErrContains: []string{"handshake failed", "key is unknown"},
+			},
+		}
+
+		for _, tt := range testcases {
+			t.Run(tt.name, func(t *testing.T) {
+				testHostKeyCase(t, tt)
+			})
+		}
+	})
+	// TODO: test default allow known host keys in ~/.ssh/known_hosts
+	t.Run("fixedHostKey", func(t *testing.T) {
+		t.Run("testHostKeyParsing", func(t *testing.T) {
+			pk := hostKey2.PublicKey()
+			t.Logf("hostKey2.PublicKey: type=%s, publicKey=%v", pk.Type(), pk)
+
+			kString := string(ssh.MarshalAuthorizedKey(pk))
+			t.Logf("hostKey2.PublicKey -> authorized key: %s", kString)
+
+			// k, err := ssh.ParsePublicKey(kBytes)
+			k, _, _, _, err := ssh.ParseAuthorizedKey([]byte(kString))
+			if err != nil {
+				t.Errorf("❌ failed to parse authorized key: %v", err)
+			}
+			t.Logf("ssh.ParseAuthorizedKey: type=%s, publicKey=%v", k.Type(), k)
+
+			gotKString := string(ssh.MarshalAuthorizedKey(k))
+			if gotKString != kString {
+				t.Errorf("❌ parsed key does not match original key: got %q, want %q", gotKString, kString)
+			}
+			t.Logf("✅ host key parsing works: type=%s", k.Type())
+			t.Logf("   original key: %q", kString)
+			t.Logf("   parsed   key: %q", gotKString)
+		})
+
+		var fixedHostKeyCheckConfig = func(hostKey ssh.Signer) *SshHostKeyCheckConfig {
+			ak := string(ssh.MarshalAuthorizedKey(hostKey.PublicKey()))
+			return &SshHostKeyCheckConfig{
+				FixedHostKey: ak,
+			}
+		}
+
+		testcases := []hostKeyTestcase{
+			{
+				name:          "hostKey1_to_sshd1",
+				addr:          sshd1.Addr(),
+				user:          testUser,
+				checking:      fixedHostKeyCheckConfig(hostKey1),
+				expectedError: false,
+			},
+			{
+				name:                "hostKey1_to_sshd2",
+				addr:                sshd2.Addr(),
+				user:                testUser,
+				checking:            fixedHostKeyCheckConfig(hostKey1),
+				expectedError:       true,
+				expectedErrContains: []string{"handshake failed", "host key mismatch"},
+			},
+			{
+				name:                "hostKey2_to_sshd1",
+				addr:                sshd1.Addr(),
+				user:                testUser,
+				checking:            fixedHostKeyCheckConfig(hostKey2),
+				expectedError:       true,
+				expectedErrContains: []string{"handshake failed", "host key mismatch"},
+			},
+			{
+				name:          "hostKey2_to_sshd2",
+				addr:          sshd2.Addr(),
+				user:          testUser,
+				checking:      fixedHostKeyCheckConfig(hostKey2),
+				expectedError: false,
+			},
+			{
+				name:                "badHostKey",
+				addr:                sshd1.Addr(),
+				user:                testUser,
+				checking:            &SshHostKeyCheckConfig{FixedHostKey: "ssh-rsa not-a-valid-key"},
+				expectedError:       true,
+				expectedErrContains: []string{"failed to prepare SSH host key callback", "no key found"},
+			},
+			{
+				name:                "emptyHostKey",
+				addr:                sshd1.Addr(),
+				user:                testUser,
+				checking:            &SshHostKeyCheckConfig{FixedHostKey: ""},
+				expectedError:       true,
+				expectedErrContains: []string{"handshake failed", "key is unknown"},
+			},
+		}
+
+		for _, tt := range testcases {
+			t.Run(tt.name, func(t *testing.T) {
+				testHostKeyCase(t, tt)
+			})
+		}
+	})
+	t.Run("insecureIgnore", func(t *testing.T) {
+		testcases := []hostKeyTestcase{
+			{
+				name: "sshd1_insecureIgnore",
+				addr: sshd1.Addr(),
+				user: testUser,
+				checking: &SshHostKeyCheckConfig{
+					InsecureIgnore: true,
+				},
+				expectedError: false,
+			},
+			{
+				name: "sshd2_insecureIgnore",
+				addr: sshd2.Addr(),
+				user: testUser,
+				checking: &SshHostKeyCheckConfig{
+					InsecureIgnore: true,
+				},
+				expectedError: false,
+			},
+		}
+
+		for _, tt := range testcases {
+			t.Run(tt.name, func(t *testing.T) {
+				testHostKeyCase(t, tt)
+			})
+		}
+	})
+	t.Run("knownHostsPath", func(t *testing.T) {
+		// create a temporary known_hosts file with hostKey1
+		goodKnownHostFile, err := os.CreateTemp(t.TempDir(), "known_hosts_")
+		if err != nil {
+			t.Fatalf("❌ failed to create a temporary known_hosts file: %v", err)
+		}
+		defer func() {
+			_ = goodKnownHostFile.Close()
+			_ = os.Remove(goodKnownHostFile.Name())
+		}()
+
+		// notice: the format is: "<host> <keytype> <base64-encoded key> [comment]"
+		hostKey1Line := fmt.Sprintf("%s %s\n",
+			sshd1.Addr(),
+			strings.TrimSpace(string(ssh.MarshalAuthorizedKey(hostKey1.PublicKey()))),
+		)
+		t.Logf("ℹ️ writing line to temporary known_hosts file %s: %s", goodKnownHostFile.Name(), hostKey1Line)
+		_, err = goodKnownHostFile.WriteString(hostKey1Line)
+		if err != nil {
+			t.Fatalf("❌ failed to write to the temporary known_hosts file: %v", err)
+		}
+
+		badKnownHostFile, err := os.CreateTemp(t.TempDir(), "known_hosts_")
+		if err != nil {
+			t.Fatalf("❌ failed to create a temporary known_hosts file: %v", err)
+		}
+		defer func() {
+			_ = badKnownHostFile.Close()
+			_ = os.Remove(badKnownHostFile.Name())
+		}()
+		// write a bad line to the bad known_hosts file
+		_, err = badKnownHostFile.WriteString("this is not a valid known_hosts line\n")
+		if err != nil {
+			t.Fatalf("❌ failed to write to the temporary known_hosts file: %v", err)
+		}
+
+		if !strings.Contains(sshd1.Addr(), "127.0.0.1") {
+			t.Fatalf("❌ sshd1.Addr() should be 127.0.0.1 for hostname_mismatch test, got: %s", sshd1.Addr())
+		}
+
+		testcases := []hostKeyTestcase{
+			{
+				name: "sshd1_in_knownHostsPath",
+				addr: sshd1.Addr(),
+				user: testUser,
+				checking: &SshHostKeyCheckConfig{
+					KnownHostsPath: []string{goodKnownHostFile.Name()},
+				},
+				expectedError: false,
+			},
+			{
+				name: "hostname_mismatch",
+				addr: strings.ReplaceAll(sshd1.Addr(), "127.0.0.1", "localhost"),
+				user: testUser,
+				checking: &SshHostKeyCheckConfig{
+					KnownHostsPath: []string{goodKnownHostFile.Name()},
+				},
+				expectedError:       true,
+				expectedErrContains: []string{"handshake failed", "key is unknown"},
+			},
+			{
+				name:                "sshd2_not_in_knownHostsPath",
+				addr:                sshd2.Addr(),
+				user:                testUser,
+				checking:            &SshHostKeyCheckConfig{KnownHostsPath: []string{goodKnownHostFile.Name()}},
+				expectedError:       true,
+				expectedErrContains: []string{"handshake failed", "key is unknown"},
+			},
+			{
+				name:                "bad_knownHostsFile",
+				addr:                sshd1.Addr(),
+				user:                testUser,
+				checking:            &SshHostKeyCheckConfig{KnownHostsPath: []string{badKnownHostFile.Name()}},
+				expectedError:       true,
+				expectedErrContains: []string{"failed to prepare SSH host key callback", "illegal base64 data"},
+			},
+			{
+				name:                "nonexistent_knownHostsFile",
+				addr:                sshd1.Addr(),
+				user:                testUser,
+				checking:            &SshHostKeyCheckConfig{KnownHostsPath: []string{"./this_file_does_not_exist_known_hosts"}},
+				expectedError:       true,
+				expectedErrContains: []string{"failed to prepare SSH host key callback", "no such file or directory"},
+			},
+		}
+
+		for _, tt := range testcases {
+			t.Run(tt.name, func(t *testing.T) {
+				testHostKeyCase(t, tt)
+			})
+		}
+	})
+}
+
+type hostKeyTestcase struct {
+	name string
+
+	addr     string
+	user     testsshd.User
+	checking *SshHostKeyCheckConfig
+
+	expectedError       bool
+	expectedErrContains []string
+}
+
+func testHostKeyCase(t *testing.T, tt hostKeyTestcase) {
+	t.Logf("➡️ trying host key checking: addr=%s, hostKeyChecking=%#v",
+		tt.addr, tt.checking)
+
+	cfg := &SshClientConfig{
+		Addr: tt.addr,
+		User: tt.user.Username, Auth: []SshAuth{{Password: tt.user.Password}},
+		HostKeyCheck: tt.checking,
+	}
+	sshClient := &ImmediateSshExecutor{Config: cfg}
+
+	cmd := &Command{Command: "echo hello"}
+
+	io := NewManagedIO()
+	io.Hijack(cmd)
+
+	if err := cmd.Validate(); err != nil {
+		t.Fatalf("❌ cmd.Validate() failed: %v", err)
+	}
+
+	err := sshClient.Execute(context.Background(), cmd)
+	if (err != nil) != tt.expectedError {
+		t.Errorf("❌ sshClient.Execute() error = %v, expectedError %v",
+			err, tt.expectedError)
+		return
+	}
+	for _, expectStr := range tt.expectedErrContains {
+		if (err != nil) && !strings.Contains(err.Error(), expectStr) {
+			t.Errorf("❌ sshClient.Execute() error = %v, expected to contain %q",
+				err, tt.expectedErrContains)
+			return
+		}
+	}
+
+	t.Logf("✅ sshClient.Execute() got expected error %v", err)
+
+	// cmd result check is actually not a part of host key checking test
+	if !tt.expectedError {
+		stdout := io.Stdout.String()
+		if stdout != "hello\n" {
+			t.Errorf("❌ stdout got %q, expected %q", stdout, "hello\n")
+		} else {
+			t.Logf("✅ stdout got expected %q", stdout)
+		}
+	}
 }
 
 // An example to use SshAuth.AuthMethod with
