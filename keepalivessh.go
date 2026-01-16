@@ -185,45 +185,6 @@ func (c *keepAliveSshClient) Close() error {
 	return err
 }
 
-// dialSsh is a helper function to prepare authentication methods and
-// dial the SSH client.
-func dialSsh(config *SshClientConfig) (*ssh.Client, error) {
-	authMethods, errs := prepareSshAuthMethods(config.Auth)
-	for _, authErr := range errs {
-		if authErr != nil {
-			// It's totally fine to error here, since there can be multiple auth methods.
-			// And if all of them failed, the connection will fail and a well-formed error
-			// will be returned by ssh.Dial.
-			Logger.Warn("failed to prepare SSH auth methods", "err", authErr)
-		}
-	}
-	hostKeyCheck, err := hostKeyCallback(config.HostKeyCheck)
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare SSH host key callback: %w", err)
-	}
-	clientConfig := &ssh.ClientConfig{
-		User:            config.User,
-		Auth:            authMethods,
-		Timeout:         config.Timeout(),
-		HostKeyCallback: hostKeyCheck,
-	}
-
-	return ssh.Dial("tcp", config.Addr, clientConfig)
-}
-
-// sshClientString returns a string representation of the SSH client.
-// For logging purpose.
-func sshClientString(client *ssh.Client) string {
-	if client == nil {
-		return "*ssh.Client(nil)"
-	}
-	return fmt.Sprintf("*ssh.Client(%x: %s/%s => %s@%s/%s)",
-		client.SessionID(),
-		client.LocalAddr(), client.ClientVersion(),
-		client.User(), client.RemoteAddr(), client.ServerVersion(),
-	)
-}
-
 // keep-alive ssh client errors
 var (
 	// ErrAlreadyClosed is returned when calling Close() on an already closed client.

@@ -12,6 +12,41 @@ import (
 	"golang.org/x/crypto/ssh/knownhosts"
 )
 
+// This file implements common SSH login logic,
+// including ssh dialing, host key checking, and other helpers.
+
+// The remote exec over SSH is implemented in executor.go.
+
+// // // ssh dialing // // //
+
+// dialSsh is a helper function to prepare authentication methods and
+// dial the SSH client.
+func dialSsh(config *SshClientConfig) (*ssh.Client, error) {
+	authMethods, errs := prepareSshAuthMethods(config.Auth)
+	for _, authErr := range errs {
+		if authErr != nil {
+			// It's totally fine to error here, since there can be multiple auth methods.
+			// And if all of them failed, the connection will fail and a well-formed error
+			// will be returned by ssh.Dial.
+			Logger.Warn("failed to prepare SSH auth methods", "err", authErr)
+		}
+	}
+	hostKeyCheck, err := hostKeyCallback(config.HostKeyCheck)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare SSH host key callback: %w", err)
+	}
+	clientConfig := &ssh.ClientConfig{
+		User:            config.User,
+		Auth:            authMethods,
+		Timeout:         config.Timeout(),
+		HostKeyCallback: hostKeyCheck,
+	}
+
+	return ssh.Dial("tcp", config.Addr, clientConfig)
+}
+
+// // // host key checking // // //
+
 // hostKeyCallback returns the ssh.HostKeyCallback according to the
 // SshHostKeyCheckConfig:
 //
@@ -98,4 +133,19 @@ func denyAllHostKeys(msg string) ssh.HostKeyCallback {
 	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 		return fmt.Errorf("ssh: all host keys are denied: %s", msg)
 	}
+}
+
+// // // helper methods // // //
+
+// sshClientString returns a string representation of the SSH client.
+// For logging purpose.
+func sshClientString(client *ssh.Client) string {
+	if client == nil {
+		return "*ssh.Client(nil)"
+	}
+	return fmt.Sprintf("*ssh.Client(%x: %s/%s => %s@%s/%s)",
+		client.SessionID(),
+		client.LocalAddr(), client.ClientVersion(),
+		client.User(), client.RemoteAddr(), client.ServerVersion(),
+	)
 }
