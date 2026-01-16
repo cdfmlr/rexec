@@ -507,6 +507,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -532,6 +533,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -557,6 +559,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -586,6 +589,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -612,6 +616,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -639,6 +644,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}}, ctx: context.Background(),
 				cmd: &Command{
 					Command: "notExistCommand",
@@ -666,6 +672,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -691,6 +698,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -716,6 +724,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -745,6 +754,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -771,6 +781,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -798,6 +809,7 @@ func TestExecutor_Execute(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}}, ctx: context.Background(),
 				cmd: &Command{
 					Command: "notExistCommand",
@@ -1051,6 +1063,7 @@ func TestExecutor_Execute_cancel(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				}},
 				ctx: context.Background(),
 				cmd: &Command{
@@ -1218,6 +1231,7 @@ func Test_singleCommandMultiExecute(t *testing.T) {
 				{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 			},
 			TimeoutSeconds: 5,
+			HostKeyCheck:   ignoreHostKeyCheck,
 		}},
 	}
 
@@ -1310,6 +1324,7 @@ func TestImmediateSshExecutor_closing(t *testing.T) {
 			{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 		},
 		TimeoutSeconds: 5,
+		HostKeyCheck:   ignoreHostKeyCheck,
 	}}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1441,6 +1456,7 @@ func BenchmarkExecutors(b *testing.B) {
 				{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 			},
 			TimeoutSeconds: 5,
+			HostKeyCheck:   ignoreHostKeyCheck,
 		}},
 		"keepAliveSsh": &KeepAliveSshExecutor{Config: &SshClientConfig{
 			Addr: "localhost:24622",
@@ -1449,6 +1465,7 @@ func BenchmarkExecutors(b *testing.B) {
 				{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 			},
 			TimeoutSeconds: 5,
+			HostKeyCheck:   ignoreHostKeyCheck,
 			KeepAlive: SshKeepAliveConfig{
 				IntervalSeconds: 10,
 			},
@@ -1494,6 +1511,7 @@ func BenchmarkExecutors(b *testing.B) {
 				{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 			},
 			TimeoutSeconds: 5,
+			HostKeyCheck:   ignoreHostKeyCheck,
 			KeepAlive: SshKeepAliveConfig{
 				IntervalSeconds: 10,
 			},
@@ -1599,6 +1617,7 @@ func ExampleImmediateSshExecutor_Execute() {
 			{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 		},
 		TimeoutSeconds: 5,
+		HostKeyCheck:   ignoreHostKeyCheck,
 	}}
 
 	ctx := context.Background()
@@ -1634,6 +1653,7 @@ func ExampleImmediateSshExecutor_Execute_timeout() {
 			{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 		},
 		TimeoutSeconds: 5,
+		HostKeyCheck:   ignoreHostKeyCheck,
 	}}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -1668,6 +1688,7 @@ func ExampleImmediateSshExecutor_Execute_cancel() {
 			{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 		},
 		TimeoutSeconds: 5,
+		HostKeyCheck:   ignoreHostKeyCheck,
 	}}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1705,6 +1726,7 @@ func ExampleKeepAliveSshExecutor_Execute() {
 			{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 		},
 		TimeoutSeconds: 5,
+		HostKeyCheck:   ignoreHostKeyCheck,
 		KeepAlive: SshKeepAliveConfig{
 			IntervalSeconds:  10,
 			IncrementSeconds: 3,

@@ -41,6 +41,7 @@ func Test_dialSsh(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				},
 			},
 			wantErr: false,
@@ -55,6 +56,7 @@ func Test_dialSsh(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				},
 			},
 			wantErr: true,
@@ -69,6 +71,7 @@ func Test_dialSsh(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				},
 			},
 			wantErr: true,
@@ -83,6 +86,7 @@ func Test_dialSsh(t *testing.T) {
 						{Password: "BADPASSWORD"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				},
 			},
 			wantErr: true,
@@ -162,6 +166,7 @@ func Test_keepAliveSshClient(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 					KeepAlive: SshKeepAliveConfig{
 						IntervalSeconds:  3,
 						IncrementSeconds: 1,
@@ -182,6 +187,7 @@ func Test_keepAliveSshClient(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 					KeepAlive: SshKeepAliveConfig{
 						IntervalSeconds:  3,
 						IncrementSeconds: 1,
@@ -202,6 +208,7 @@ func Test_keepAliveSshClient(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 					KeepAlive: SshKeepAliveConfig{
 						IntervalSeconds:  3,
 						IncrementSeconds: 1,
@@ -222,6 +229,7 @@ func Test_keepAliveSshClient(t *testing.T) {
 						{Password: "BADPASSWORD"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 					KeepAlive: SshKeepAliveConfig{
 						IntervalSeconds:  3,
 						IncrementSeconds: 1,
@@ -242,6 +250,7 @@ func Test_keepAliveSshClient(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 					KeepAlive: SshKeepAliveConfig{
 						IntervalSeconds:  60,
 						IncrementSeconds: 10,

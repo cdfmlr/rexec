@@ -538,6 +538,11 @@ func TestHostKey(t *testing.T) {
 	})
 }
 
+// a shared insecure ignore config for tests
+var ignoreHostKeyCheck = &SshHostKeyCheckConfig{
+	InsecureIgnore: true,
+}
+
 type hostKeyTestcase struct {
 	name string
 

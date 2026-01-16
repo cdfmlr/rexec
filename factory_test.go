@@ -72,6 +72,7 @@ func TestExecutorFactory_Executor(t *testing.T) {
 							{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 						},
 						TimeoutSeconds: 5,
+						HostKeyCheck:   ignoreHostKeyCheck,
 					},
 				},
 			},
@@ -84,6 +85,7 @@ func TestExecutorFactory_Executor(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 				},
 			},
 		},
@@ -106,6 +108,7 @@ func TestExecutorFactory_Executor(t *testing.T) {
 							{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 						},
 						TimeoutSeconds: 5,
+						HostKeyCheck:   ignoreHostKeyCheck,
 						KeepAlive: SshKeepAliveConfig{
 							IntervalSeconds: 10,
 						},
@@ -120,6 +123,7 @@ func TestExecutorFactory_Executor(t *testing.T) {
 						{PrivateKeyPath: "./testsshd/testsshd.id_rsa"},
 					},
 					TimeoutSeconds: 5,
+					HostKeyCheck:   ignoreHostKeyCheck,
 					KeepAlive: SshKeepAliveConfig{
 						IntervalSeconds: 10,
 					},
