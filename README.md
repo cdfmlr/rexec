@@ -73,6 +73,11 @@ exec := &rexec.ImmediateSshExecutor{Config: cfg}
 _ = exec.Execute(context.Background(), cmd)
 ```
 
+Since v2.3.0, rexec enforces SSH host key checking by default (for security).
+The target host key must be in `/etc/ssh/ssh_known_hosts` or `~/ssh/known_hosts`,
+or specified it via custom `HostKeyCheck` in `SshClientConfig`.
+To disable it (not recommended), set `cfg.HostKeyCheck = &rexec.SshHostKeyCheckConfig{ InsecureIgnore: true }`.
+
 Keep-alive (connection reused across commands):
 
 ```go
