@@ -19,9 +19,9 @@ import (
 
 // // // ssh dialing // // //
 
-// dialSsh is a helper function to prepare authentication methods and
+// DialSsh is a helper function to prepare authentication methods and
 // dial the SSH client.
-func dialSsh(config *SshClientConfig) (*ssh.Client, error) {
+func DialSsh(config *SshClientConfig) (*ssh.Client, error) {
 	authMethods, errs := prepareSshAuthMethods(config.Auth)
 	for _, authErr := range errs {
 		if authErr != nil {

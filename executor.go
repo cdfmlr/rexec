@@ -284,7 +284,7 @@ func (e *ImmediateSshExecutor) Execute(ctx context.Context, cmd *Command) error 
 		return err
 	}
 
-	client, err := dialSsh(e.Config)
+	client, err := DialSsh(e.Config)
 	if err != nil {
 		logger.Warn("failed to dial SSH client", "err", err)
 		return err

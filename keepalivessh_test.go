@@ -94,14 +94,14 @@ func Test_dialSsh(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := dialSsh(tt.args.config)
+			got, err := DialSsh(tt.args.config)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("❌ dialSsh() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("❌ DialSsh() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			t.Logf("✅ got: %v, err: %v", got, err)
 			// if !reflect.DeepEqual(got, tt.want) {
-			//	t.Errorf("dialSsh() got = %v, want %v", got, tt.want)
+			//	t.Errorf("DialSsh() got = %v, want %v", got, tt.want)
 			// }
 		})
 	}

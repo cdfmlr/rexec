@@ -27,7 +27,7 @@ func (c *keepAliveSshClient) redial() {
 	logger := Logger.With("addr", c.SshClientConfig.Addr, "user", c.SshClientConfig.User)
 	logger.Debug("keepAliveSshClient redialing ssh client")
 
-	client, err := dialSsh(c.SshClientConfig)
+	client, err := DialSsh(c.SshClientConfig)
 	if err != nil {
 		logger.Warn("keepAliveSshClient redial ssh client failed", "err", err)
 		return
@@ -140,7 +140,7 @@ func (c *keepAliveSshClient) Client() (*ssh.Client, error) {
 
 	logger.Debug("keepAliveSshClient dialing ssh client...")
 
-	client, err := dialSsh(c.SshClientConfig)
+	client, err := DialSsh(c.SshClientConfig)
 	if err != nil {
 		logger.Error("keepAliveSshClient dial ssh client failed", "err", err)
 		return nil, err
